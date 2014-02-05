@@ -1,0 +1,13 @@
+Invisible Ink a small tool to simplify working with gpg-encrypted text. The
+default command, 'edit', will decrypt or create a given file and edit the
+cleatext (if any) using your editor of choice. When you exit your editor, the
+modified cleartext will be re-encrypted.
+
+Example: ii /secret/master-plan edit
+         ii /secret/master-plan
+
+The 'echo' command can also be given, in which case the decrypted cleartext
+will be written to STDOUT. Useful for piping the cleartext to another program.
+
+Example: ii /secret/master-plan echo | less
+

@@ -1,0 +1,70 @@
+#!/bin/bash
+#
+# USAGE: ii FILE [COMMAND]
+#  DESC: Invisible ink.
+#        When given the 'edit' command, decrypt a FILE, edit and re-encrypt. If
+#        the file doesn't exist, decryption will be skipped.
+#        When given the 'echo' command, decrypt a FILE and write the cleartext
+#        to STDOUT
+#    BY: Macquarie Sharpless <macquarie.sharpless@gmail.com> 2014
+#        grimheart.github.com
+
+
+
+# Generic error handler
+function err {
+	local msg=${@}
+	echo "Error: ${msg}"
+	expunge ${II_CLEARFILE}
+	exit 1
+}
+
+# Ensure that the given file is removed
+function expunge {
+	local file="${@}"
+	rm -f "${file}" &> /dev/null
+}
+
+
+
+II_FILE=${1}
+[ -z "${II_FILE}" ] && err "no path given"
+II_CMD=${2}
+[ -z "${II_CMD}" ] && II_CMD="edit"
+
+II_CLEARFILE="/tmp/iiclear"
+II_KEYUID="invisibleink"
+
+
+
+# Prepare cleartext file for editing
+expunge   ${II_CLEARFILE}
+touch     ${II_CLEARFILE}
+chmod 600 ${II_CLEARFILE}
+
+# Decrypt the given file if it already exists
+if [ -e ${II_FILE} ]; then
+	gpg -r ${II_KEYUID} --output ${II_CLEARFILE} --yes -d ${II_FILE} || err "decryption failed"
+fi
+
+case ${II_CMD} in
+  "edit")
+    # Can the editor leave traces of the cleartext around?
+    # Might want to force vim and disabling any cache files or backups, etc.
+
+    # Edit the cleartext file
+    ${EDITOR} ${II_CLEARFILE}
+
+    # Encrypt the edited clearfile
+    gpg -r ${II_KEYUID} -e ${II_CLEARFILE}
+    cat ${II_CLEARFILE}.gpg > ${II_FILE}
+  ;;
+  "echo")
+    cat ${II_CLEARFILE}
+  ;;
+esac
+
+# Expunge cleartext and temporary files
+expunge ${II_CLEARFILE}
+expunge ${II_CLEARFILE}.gpg
+
