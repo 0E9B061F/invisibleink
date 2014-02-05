@@ -1,13 +1,16 @@
-Invisible Ink a small tool to simplify working with gpg-encrypted text. The
-default command, 'edit', will decrypt or create a given file and edit the
-cleatext (if any) using your editor of choice. When you exit your editor, the
-modified cleartext will be re-encrypted.
+ii (invisible ink) is a small tool to simplify working with gpg-encrypted text.
+By default, ii will decrypt the given file, open the cleartext for editing
+(with $EDITOR), and then re-encrypt the file when your editor exits. A normal
+invocation looks like this:
 
-Example: ii /secret/master-plan edit
-         ii /secret/master-plan
+  ii /secret/master-plan
 
-The 'echo' command can also be given, in which case the decrypted cleartext
-will be written to STDOUT. Useful for piping the cleartext to another program.
+/secret/master-plan will be edited using the value of $EDITOR.
 
-Example: ii /secret/master-plan echo | less
+ii can also be given a command in addition to a file. The given command will be
+executed with the cleartext file as it's first argument. For example,
+
+  ii /black/magic less
+
+will display the cleartext contents of /black/magic using 'less'.
 
