@@ -2,10 +2,10 @@
 #
 # USAGE: ii FILE [COMMAND]
 #  DESC: Invisible ink.
-#        When given the 'edit' command, decrypt a FILE, edit and re-encrypt. If
-#        the file doesn't exist, decryption will be skipped.
-#        When given the 'echo' command, decrypt a FILE and write the cleartext
-#        to STDOUT
+#        Decrypt or create the given FILE. COMMAND will be run on the
+#        cleartext. When COMMAND exits, the cleartext will be re-encrypted.
+#        The default command is 'EDITOR', in which case the value of the
+#        $EDITOR variable will be used as the actual command.
 #    BY: Macquarie Sharpless <macquarie.sharpless@gmail.com> 2014
 #        grimheart.github.com
 
@@ -30,7 +30,7 @@ function expunge {
 II_FILE=${1}
 [ -z "${II_FILE}" ] && err "no path given"
 II_CMD=${2}
-[ -z "${II_CMD}" ] && II_CMD="edit"
+[ -z "${II_CMD}" ] && II_CMD="EDITOR"
 
 II_CLEARFILE="/tmp/iiclear"
 II_KEYUID="invisibleink"
@@ -48,21 +48,21 @@ if [ -e ${II_FILE} ]; then
 fi
 
 case ${II_CMD} in
-  "edit")
-    # Can the editor leave traces of the cleartext around?
-    # Might want to force vim and disabling any cache files or backups, etc.
-
+  # The 'edit' command is the default command; rather than a specific program,
+  # it will use your $EDITOR to edit the cleartext.
+  "EDITOR")
     # Edit the cleartext file
     ${EDITOR} ${II_CLEARFILE}
-
-    # Encrypt the edited clearfile
-    gpg -r ${II_KEYUID} -e ${II_CLEARFILE}
-    cat ${II_CLEARFILE}.gpg > ${II_FILE}
   ;;
-  "echo")
-    cat ${II_CLEARFILE}
+  *)
+    # Run an arbitrary command over the cleartext file
+    ${II_CMD} ${II_CLEARFILE}
   ;;
 esac
+
+# (Re-)encrypt the (edited?) cleartext
+gpg -r ${II_KEYUID} -e ${II_CLEARFILE}
+cat ${II_CLEARFILE}.gpg > ${II_FILE}
 
 # Expunge cleartext and temporary files
 expunge ${II_CLEARFILE}
