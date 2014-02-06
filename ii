@@ -46,13 +46,12 @@ II_CMD=${2}
 # Set up environment
 II_TEMPDIR=$(mktemp -dt "invisibleink.XXXXXX") || ii.err "failed to create temporary directory"
 II_CLEARFILE="${II_TEMPDIR}/text"
-II_KEYUID="invisibleink"
 
 
 
 # Decrypt the given file if it already exists
 if [ -e "${II_FILE}" ]; then
-	gpg -q -r "${II_KEYUID}" --output "${II_CLEARFILE}" -d "${II_FILE}" || ii.err "decryption failed"
+	gpg -q --output "${II_CLEARFILE}" -d "${II_FILE}" || ii.err "decryption failed"
 else
   touch ${II_CLEARFILE}
 fi
@@ -66,7 +65,7 @@ II_STOP=$(stat -c %Y "${II_CLEARFILE}" 2> /dev/null)
 
 if [ "${II_STOP}" -gt "${II_START}" ]; then
   # (Re-)encrypt the cleartext
-  gpg -r "${II_KEYUID}" -e "${II_CLEARFILE}" || ii.err "encryption failed - any modifications to the cleartext will be lost"
+  gpg -e "${II_CLEARFILE}" || ii.err "encryption failed - any modifications to the cleartext will be lost"
   cat "${II_CLEARFILE}.gpg" > "${II_FILE}"
 fi
 
