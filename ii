@@ -15,14 +15,13 @@
 function err {
 	local msg=${@}
 	echo "Error: ${msg}"
-	expunge ${II_CLEARFILE}
+	expunge
 	exit 1
 }
 
-# Ensure that the given file is removed
+# Remove the temporary directory
 function expunge {
-	local file="${@}"
-	rm -f "${file}" &> /dev/null
+	rm -rf "${II_TEMPDIR}" &> /dev/null
 }
 
 
@@ -32,24 +31,20 @@ II_FILE=${1}
 II_CMD=${2}
 [ -z "${II_CMD}" ] && II_CMD="EDITOR"
 
-II_CLEARFILE="/tmp/iiclear"
+II_TEMPDIR=$(mktemp -dt "invisibleink.XXXX")
+II_CLEARFILE="${II_TEMPDIR}/text"
 II_KEYUID="invisibleink"
 
 
 
-# Prepare cleartext file for editing
-expunge   ${II_CLEARFILE}
-touch     ${II_CLEARFILE}
-chmod 600 ${II_CLEARFILE}
-
 # Decrypt the given file if it already exists
 if [ -e ${II_FILE} ]; then
-	gpg -r ${II_KEYUID} --output ${II_CLEARFILE} --yes -d ${II_FILE} || err "decryption failed"
+	gpg -q -r ${II_KEYUID} --output ${II_CLEARFILE} -d ${II_FILE} || err "decryption failed"
 fi
 
 case ${II_CMD} in
-  # The 'edit' command is the default command; rather than a specific program,
-  # it will use your $EDITOR to edit the cleartext.
+  # The 'EDITOR' command is the default command; rather than a specific
+  # program, it will use your $EDITOR to edit the cleartext.
   "EDITOR")
     # Edit the cleartext file
     ${EDITOR} ${II_CLEARFILE}
@@ -64,7 +59,6 @@ esac
 gpg -r ${II_KEYUID} -e ${II_CLEARFILE}
 cat ${II_CLEARFILE}.gpg > ${II_FILE}
 
-# Expunge cleartext and temporary files
-expunge ${II_CLEARFILE}
-expunge ${II_CLEARFILE}.gpg
+# Expunge the cleartext and temporary files
+expunge
 
