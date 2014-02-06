@@ -12,34 +12,44 @@
 
 
 # Generic error handler
-function err {
+ii.err() {
 	local msg=${@}
 	echo "Error: ${msg}"
-	expunge
 	exit 1
 }
 
-# Remove the temporary directory
-function expunge {
-	rm -rf "${II_TEMPDIR}" &> /dev/null
+# Expunge temporary files, including the cleartext
+ii.cleanup() {
+  [ -e "${II_TEMPDIR}" ] && rm -rf "${II_TEMPDIR}"
 }
 
 
 
-II_FILE=${1}
-[ -z "${II_FILE}" ] && err "no path given"
-II_CMD=${2}
-[ -z "${II_CMD}" ] && II_CMD="EDITOR"
+# Cleanup on any exit
+trap "ii.cleanup" EXIT
 
-II_TEMPDIR=$(mktemp -dt "invisibleink.XXXX")
+# Get args
+II_FILE=${1}
+# Make sure the path given is valid for our purposes
+if   [ ! "${II_FILE}" ]; then
+  ii.err "no path given"
+elif [ ! -f "${II_FILE}" ] && [ -e "${II_FILE}" ]; then
+  ii.err "'${II_FILE}' is an invalid target"
+fi
+
+II_CMD=${2}
+[ "${II_CMD}"  ] || II_CMD="EDITOR"
+
+# Set up environment
+II_TEMPDIR=$(mktemp -dt "invisibleink.XXXXXX") || ii.err "failed to create temporary directory"
 II_CLEARFILE="${II_TEMPDIR}/text"
 II_KEYUID="invisibleink"
 
 
 
 # Decrypt the given file if it already exists
-if [ -e ${II_FILE} ]; then
-	gpg -q -r ${II_KEYUID} --output ${II_CLEARFILE} -d ${II_FILE} || err "decryption failed"
+if [ -e "${II_FILE}" ]; then
+	gpg -q -r "${II_KEYUID}" --output "${II_CLEARFILE}" -d "${II_FILE}" || ii.err "decryption failed"
 fi
 
 case ${II_CMD} in
@@ -47,18 +57,15 @@ case ${II_CMD} in
   # program, it will use your $EDITOR to edit the cleartext.
   "EDITOR")
     # Edit the cleartext file
-    ${EDITOR} ${II_CLEARFILE}
+    ${EDITOR} "${II_CLEARFILE}"
   ;;
   *)
     # Run an arbitrary command over the cleartext file
-    ${II_CMD} ${II_CLEARFILE}
+    ${II_CMD} "${II_CLEARFILE}"
   ;;
 esac
 
 # (Re-)encrypt the (edited?) cleartext
-gpg -r ${II_KEYUID} -e ${II_CLEARFILE}
-cat ${II_CLEARFILE}.gpg > ${II_FILE}
-
-# Expunge the cleartext and temporary files
-expunge
+gpg -r "${II_KEYUID}" -e "${II_CLEARFILE}" || ii.err "encryption failed - any modifications to the cleartext will be lost"
+cat "${II_CLEARFILE}.gpg" > "${II_FILE}"
 
