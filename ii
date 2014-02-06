@@ -38,7 +38,10 @@ elif [ ! -f "${II_FILE}" ] && [ -e "${II_FILE}" ]; then
 fi
 
 II_CMD=${2}
-[ "${II_CMD}"  ] || II_CMD="EDITOR"
+# If no command is given, take the value of $EDITOR as the command
+# Complain if we have no command and $EDITOR is empty
+[ "${II_CMD}" ] || II_CMD="${EDITOR}"
+[ "${II_CMD}" ] || ii.err "no command given and \$EDITOR has no value"
 
 # Set up environment
 II_TEMPDIR=$(mktemp -dt "invisibleink.XXXXXX") || ii.err "failed to create temporary directory"
@@ -50,22 +53,20 @@ II_KEYUID="invisibleink"
 # Decrypt the given file if it already exists
 if [ -e "${II_FILE}" ]; then
 	gpg -q -r "${II_KEYUID}" --output "${II_CLEARFILE}" -d "${II_FILE}" || ii.err "decryption failed"
+else
+  touch ${II_CLEARFILE}
 fi
 
-case ${II_CMD} in
-  # The 'EDITOR' command is the default command; rather than a specific
-  # program, it will use your $EDITOR to edit the cleartext.
-  "EDITOR")
-    # Edit the cleartext file
-    ${EDITOR} "${II_CLEARFILE}"
-  ;;
-  *)
-    # Run an arbitrary command over the cleartext file
-    ${II_CMD} "${II_CLEARFILE}"
-  ;;
-esac
+II_START=$(stat -c %Y "${II_CLEARFILE}" 2> /dev/null)
 
-# (Re-)encrypt the (edited?) cleartext
-gpg -r "${II_KEYUID}" -e "${II_CLEARFILE}" || ii.err "encryption failed - any modifications to the cleartext will be lost"
-cat "${II_CLEARFILE}.gpg" > "${II_FILE}"
+# Run the given command over the cleartext file
+${II_CMD} "${II_CLEARFILE}"
+
+II_STOP=$(stat -c %Y "${II_CLEARFILE}" 2> /dev/null)
+
+if [ "${II_STOP}" -gt "${II_START}" ]; then
+  # (Re-)encrypt the cleartext
+  gpg -r "${II_KEYUID}" -e "${II_CLEARFILE}" || ii.err "encryption failed - any modifications to the cleartext will be lost"
+  cat "${II_CLEARFILE}.gpg" > "${II_FILE}"
+fi
 
