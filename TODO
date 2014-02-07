@@ -1,0 +1,13 @@
+> Backup existing encrypted file before overwriting with modified file?
+  The backup would be removed if all goes well, or left behind if there is some
+  error.
+
+> Better/different handling of temporary files in the case that re-encryption
+  fails.
+  Currently, any changes made to the cleartext will be lost if re-encryption
+  fails. The user should be notified, however, that the plaintext has been left
+  sitting around.
+
+> Perhaps the user should be able to specify a default recipient key, and/or
+  specify one on the command line (overriding the default).
+
